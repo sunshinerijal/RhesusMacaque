@@ -1,0 +1,59 @@
+{
+	"compiler": {
+		"version": "0.8.29+commit.ab55807c"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newImplementation",
+						"type": "address"
+					}
+				],
+				"name": "upgradeTo",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/ProxyAdmin.sol": "IProxy"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/ProxyAdmin.sol": {
+			"keccak256": "0x9fcae3b6183e30a2866ecb40010b1208afeaf59b4904aff5dfad503408e46cd8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://345289e1b65116bca68f62e70f128e530b283029c76c06f9eb4d47db5e0225ef",
+				"dweb:/ipfs/QmWibTGQGscMLm8UnX4Ve1sM62cvkTrrfsB6naGCgof1EY"
+			]
+		}
+	},
+	"version": 1
+}
