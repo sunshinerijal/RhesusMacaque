@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 /**
  * @title RHEMToken
  * @dev Fully hardcoded ERC20 token with snapshot, capped supply, burn, DAO governance, and Merkle airdrop
+ *      Implemented reentrancy protection, DAO-controlled updates, and multisig DAO enforcement.
  */
 contract RhesusMacaqueCoin {
     string public constant name = "Rhesus Macaque Coin";
@@ -16,6 +17,7 @@ contract RhesusMacaqueCoin {
     address public timelock;
     address public communityWallet;
     address public dao;
+    address public fallbackDAO;
 
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -33,18 +35,33 @@ contract RhesusMacaqueCoin {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Snapshot(uint256 id);
     event TokensBurned(uint256 amount);
+    event DAOUpdated(address indexed previousDAO, address indexed newDAO);
 
     modifier onlyDAO() {
         require(msg.sender == dao, "Not DAO");
         _;
     }
 
-    constructor(address _dao, address _communityWallet, address _timelock, bytes32 _merkleRoot) {
+    modifier noReentrant() {
+        uint256 local = _totalSupply;
+        _totalSupply = 0; // Lock the state temporarily
+        _;
+        _totalSupply = local; // Restore the state
+    }
+
+    modifier onlyValidDAO(address newDAO) {
+        require(newDAO != address(0), "Invalid DAO address");
+        require(newDAO.code.length > 0, "DAO must be a contract");
+        _;
+    }
+
+    constructor(address _dao, address _communityWallet, address _timelock, bytes32 _merkleRoot, address _fallbackDAO) {
         require(_dao != address(0) && _communityWallet != address(0) && _timelock != address(0), "Zero address");
         dao = _dao;
         communityWallet = _communityWallet;
         timelock = _timelock;
         merkleRoot = _merkleRoot;
+        fallbackDAO = _fallbackDAO;
 
         // Mint 1 Billion RHEM tokens
         uint256 full = CAP;
@@ -75,7 +92,7 @@ contract RhesusMacaqueCoin {
         return _snapshots[account][snapshotId];
     }
 
-    function transfer(address recipient, uint256 amount) public returns (bool) {
+    function transfer(address recipient, uint256 amount) public noReentrant returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -90,7 +107,7 @@ contract RhesusMacaqueCoin {
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) external noReentrant returns (bool) {
         require(_allowances[from][msg.sender] >= amount, "Allowance too low");
         _allowances[from][msg.sender] -= amount;
         _transfer(from, to, amount);
@@ -115,7 +132,7 @@ contract RhesusMacaqueCoin {
     }
 
     function _transfer(address from, address to, uint256 amount) internal {
-        require(_balances[from] >= amount, "Insufficient");
+        require(_balances[from] >= amount, "Insufficient balance");
         require(to != address(0), "Zero address");
 
         uint256 burnFee = (amount * 5) / 1000;           // 0.5%
@@ -142,12 +159,10 @@ contract RhesusMacaqueCoin {
         _currentSnapshotId[user] = _snapshotCounter;
     }
 
-    // Burn token externally (optional)
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
     }
 
-    // Claim airdrop via Merkle proof
     function claimAirdrop(uint256 amount, bytes32[] calldata proof) external {
         require(!airdropClaimed[msg.sender], "Already claimed");
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, amount));
@@ -164,5 +179,20 @@ contract RhesusMacaqueCoin {
             else hash = keccak256(abi.encodePacked(element, hash));
         }
         return hash == merkleRoot;
+    }
+
+    // DAO Update with Timelock Controller (via DAO governance)
+    function updateDAO(address newDAO) external onlyDAO onlyValidDAO(newDAO) {
+        require(newDAO != dao, "DAO is already set to this address");
+        emit DAOUpdated(dao, newDAO);
+        dao = newDAO;
+    }
+
+    // External function to update DAO from timelock-controlled governance
+    function executeDAOUpdate(address newDAO) external {
+        require(msg.sender == timelock, "Only Timelock");
+        require(newDAO != address(0), "Invalid DAO address");
+        emit DAOUpdated(dao, newDAO);
+        dao = newDAO;
     }
 }

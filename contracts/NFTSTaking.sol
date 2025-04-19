@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+
 // Fully embedded ERC721 minimal interface
 interface IERC721 {
     function transferFrom(address from, address to, uint256 tokenId) external;
